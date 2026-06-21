@@ -43,7 +43,7 @@ def generate_architecture_diagram():
         ("BM25 + Dense\nIndexing", "#3fb950"),
         ("Query\nRefinement", "#f0883e"),
         ("Hybrid Search\n+ RRF", "#f778ba"),
-        ("FlashRank\nReranking", "#d2a8ff"),
+        ("Reranking\nCE / FlashRank", "#d2a8ff"),
         ("LLM\nGeneration", "#79c0ff"),
     ]
 
