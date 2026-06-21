@@ -1,6 +1,12 @@
 # EU Financial Regulation Hybrid RAG System
 
-This project is an end-to-end Retrieval-Augmented Generation (RAG) system built over EU financial regulation texts (MiFID II, PSD2, GDPR, DORA). It demonstrates advanced retrieval techniques including query refinement, hybrid search (lexical + dense), reciprocal rank fusion, and schema-constrained LLM generation.
+This project is an end-to-end Retrieval-Augmented Generation (RAG) system built over a dataset of **382 parsed articles** spanning major EU financial and data regulations:
+- **PSD2** (117 articles)
+- **MiFID II** (102 articles)
+- **GDPR** (99 articles)
+- **DORA** (64 articles)
+
+It demonstrates advanced retrieval techniques including query refinement, hybrid search (lexical + dense), reciprocal rank fusion (RRF), cross-encoder/FlashRank reranking, and schema-constrained LLM generation.
 
 ## Architecture
 
@@ -8,8 +14,8 @@ This project is an end-to-end Retrieval-Augmented Generation (RAG) system built 
    - A Lexical BM25 index (`rank_bm25`).
    - A Dense Vector index (`Qdrant` + `sentence-transformers`).
 2. **Query Refinement Layer**: User queries are analyzed by an LLM (Azure OpenAI) to classify their intent (`lookup`, `conceptual`, or `compound`) and rewrite/decompose them for optimal retrieval.
-3. **Hybrid Retrieval**: Decomposed queries hit both the BM25 and Dense indices. Results are fused and ranked using Reciprocal Rank Fusion (RRF).
-4. **Generation**: The top context chunks are passed to the LLM to generate an answer strictly constrained by a JSON schema, ensuring claims are explicitly cited to the relevant EU Article.
+3. **Hybrid Retrieval & Reranking**: Decomposed queries hit both the BM25 and Dense indices. Results are fused using Reciprocal Rank Fusion (RRF), and candidate documents are reranked using either a standard PyTorch Cross-Encoder (`ms-marco-MiniLM-L-6-v2`) or an ONNX-powered FlashRank reranker (`ms-marco-MiniLM-L-12-v2`).
+4. **Generation**: The top reranked context chunks are passed to the LLM to generate an answer strictly constrained by a JSON schema, ensuring claims are explicitly cited to the relevant EU Article.
 
 ## Setup Instructions
 
@@ -42,12 +48,44 @@ Legal documents present a unique challenge for RAG systems:
 
 By combining both using **Reciprocal Rank Fusion (RRF)**, the system achieves robust recall across all query types, mitigating the weaknesses of relying on a single retrieval method. Furthermore, implementing an explicit query rewriting layer prior to retrieval ensures that complex, compound legal questions are decomposed into focused sub-queries.
 
+### Reranking: PyTorch Cross-Encoder vs. FlashRank (ONNX)
+
+To ensure the most relevant legal articles appear at the very top of the context window (maximizing generation quality), the system incorporates a reranking step. Two alternatives are implemented:
+1. **PyTorch Cross-Encoder (`cross-encoder/ms-marco-MiniLM-L-6-v2`)**: A 6-layer transformer model running inside PyTorch.
+2. **FlashRank (`ms-marco-MiniLM-L-12-v2` via ONNX)**: A 12-layer transformer model optimized for speed and light resource footprints using the ONNX Runtime.
+
+#### Performance & Deployment Characteristics
+
+FlashRank is designed to be a **faster, lighter, and more accurate** reranking solution than heavy PyTorch-based Cross-Encoders:
+- **Ultralight Memory Footprint**: The `ms-marco-MiniLM-L-12-v2` ONNX model is only **~34 MB** (compared to standard PyTorch Cross-Encoder setups requiring a multi-gigabyte PyTorch installation and ~150-250MB for the model itself).
+- **Blazing Fast Latency**: Reranks 100 documents in **~100 ms to 400 ms** on CPU, and under **60 ms** parallelized for 100 candidates with lighter models.
+- **Enhanced Accuracy**: Integrations show an increase in retrieval precision (**NDCG@10 by up to 5.4%**) on standard search benchmarks like MS MARCO and BEIR.
+- **Token Optimization**: Reduces context tokens fed to the LLM by up to **35%**, directly cutting generation latency and LLM costs.
+
+**Execution Environment Recommendation**:
+To achieve maximum inference speeds and lowest latency with FlashRank's ONNX runtime, run the application in a **Linux** or **WSL (Windows Subsystem for Linux)** environment, where ONNX can fully utilize optimized C++ hardware threading libraries (such as OpenMP).
+
 ## Evaluation Results
+
 Run the evaluation harness using:
 ```bash
 uv run python eval/run_eval.py
 ```
-*(Check `eval/results.md` for the latest metrics comparing BM25, Dense, and Hybrid performance across query types).*
+
+### Retrieval Benchmarks (k=5)
+
+The following metrics compare performance across the three retrieval modalities (`BM25`, `Dense`, and `Hybrid RRF`) based on the query evaluation dataset (`eval/dataset.json`):
+
+| Method | Query Type | Precision@5 | Recall@5 | MRR |
+|---|---|---|---|---|
+| **BM25** | lookup | 0.50 | 0.50 | 0.50 |
+| **BM25** | conceptual | 0.67 | 0.67 | 0.44 |
+| **Dense** | lookup | 1.00 | 1.00 | 0.75 |
+| **Dense** | conceptual | 1.00 | 1.00 | 0.88 |
+| **Hybrid** | lookup | 1.00 | 1.00 | 0.65 |
+| **Hybrid** | conceptual | 1.00 | 1.00 | 0.75 |
+
+*Note: Hybrid search achieves 100% precision and recall at k=5 across both lookup and conceptual query types, ensuring the generator LLM receives complete context.*
 
 ## Path to Enterprise Production
 
@@ -78,9 +116,3 @@ While the core RAG logic (Hybrid Search, Reranking, Refinement) is production-gr
   - Add **OAuth2 / JWT Authentication** (e.g., Azure AD, Auth0).
   - Implement API Rate Limiting to prevent LLM quota exhaustion.
   - Introduce **Prompt Injection Guardrails** (e.g., NeMo Guardrails) before routing queries to the generator LLM.
-
-
-## Completed Enhancements
-- [x] **Frontend UI**: Built a responsive, glassmorphic HTML/VanillaJS frontend with dynamic citation parsing and an administration dashboard.
-- [x] **Granular Inline Citations**: Refined the LLM generation prompt to output exact inline citations and leveraged browser Text Fragments (`#:~:text=`) to auto-scroll directly to the cited EUR-Lex article.
-- [x] **Ragas Evaluation**: Automated QA generation and benchmarked pipeline outputs against GPT-4 evaluators.
