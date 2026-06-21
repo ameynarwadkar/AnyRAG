@@ -1,14 +1,10 @@
 # EU Financial Regulation Hybrid RAG System
 
-This project is an end-to-end Retrieval-Augmented Generation (RAG) system built over a dataset of **382 parsed articles** spanning major EU financial and data regulations:
-- **PSD2** (117 articles)
-- **MiFID II** (102 articles)
-- **GDPR** (99 articles)
-- **DORA** (64 articles)
-
-It demonstrates advanced retrieval techniques including query refinement, hybrid search (lexical + dense), reciprocal rank fusion (RRF), cross-encoder/FlashRank reranking, and schema-constrained LLM generation.
+This project is an end-to-end Retrieval-Augmented Generation (RAG) system built over a dataset of **382 parsed articles** spanning major EU financial and data regulations. It demonstrates advanced retrieval techniques including query refinement, hybrid search (lexical + dense), reciprocal rank fusion (RRF), cross-encoder/FlashRank reranking, and schema-constrained LLM generation.
 
 ## Architecture
+
+![RAG Pipeline Architecture](assets/architecture.png)
 
 1. **Ingestion & Indexing**: Raw HTML acts are scraped from EUR-Lex, parsed into discrete articles, and embedded into two distinct indices:
    - A Lexical BM25 index (`rank_bm25`).
@@ -16,6 +12,15 @@ It demonstrates advanced retrieval techniques including query refinement, hybrid
 2. **Query Refinement Layer**: User queries are analyzed by an LLM (Azure OpenAI) to classify their intent (`lookup`, `conceptual`, or `compound`) and rewrite/decompose them for optimal retrieval.
 3. **Hybrid Retrieval & Reranking**: Decomposed queries hit both the BM25 and Dense indices. Results are fused using Reciprocal Rank Fusion (RRF), and candidate documents are reranked using either a standard PyTorch Cross-Encoder (`ms-marco-MiniLM-L-6-v2`) or an ONNX-powered FlashRank reranker (`ms-marco-MiniLM-L-12-v2`).
 4. **Generation**: The top reranked context chunks are passed to the LLM to generate an answer strictly constrained by a JSON schema, ensuring claims are explicitly cited to the relevant EU Article.
+
+### Dataset
+
+- **PSD2** (117 articles)
+- **MiFID II** (102 articles)
+- **GDPR** (99 articles)
+- **DORA** (64 articles)
+
+![Dataset Distribution](assets/dataset.png)
 
 ## Setup Instructions
 
@@ -62,9 +67,6 @@ FlashRank is designed to be a **faster, lighter, and more accurate** reranking s
 - **Enhanced Accuracy**: Integrations show an increase in retrieval precision (**NDCG@10 by up to 5.4%**) on standard search benchmarks like MS MARCO and BEIR.
 - **Token Optimization**: Reduces context tokens fed to the LLM by up to **35%**, directly cutting generation latency and LLM costs.
 
-**Execution Environment Recommendation**:
-To achieve maximum inference speeds and lowest latency with FlashRank's ONNX runtime, run the application in a **Linux** or **WSL (Windows Subsystem for Linux)** environment, where ONNX can fully utilize optimized C++ hardware threading libraries (such as OpenMP).
-
 ## Evaluation Results
 
 Run the evaluation harness using:
@@ -84,6 +86,8 @@ The following metrics compare performance across the three retrieval modalities 
 | **Dense** | conceptual | 1.00 | 1.00 | 0.88 |
 | **Hybrid** | lookup | 1.00 | 1.00 | 0.65 |
 | **Hybrid** | conceptual | 1.00 | 1.00 | 0.75 |
+
+![Retrieval Benchmarks](assets/evaluation.png)
 
 *Note: Hybrid search achieves 100% precision and recall at k=5 across both lookup and conceptual query types, ensuring the generator LLM receives complete context.*
 
@@ -116,3 +120,9 @@ While the core RAG logic (Hybrid Search, Reranking, Refinement) is production-gr
   - Add **OAuth2 / JWT Authentication** (e.g., Azure AD, Auth0).
   - Implement API Rate Limiting to prevent LLM quota exhaustion.
   - Introduce **Prompt Injection Guardrails** (e.g., NeMo Guardrails) before routing queries to the generator LLM.
+
+## Completed Enhancements
+- [x] **Frontend UI**: Built a responsive, glassmorphic HTML/VanillaJS frontend with dynamic citation parsing and an administration dashboard.
+- [x] **Granular Inline Citations**: Refined the LLM generation prompt to output exact inline citations and leveraged browser Text Fragments (`#:~:text=`) to auto-scroll directly to the cited EUR-Lex article.
+- [x] **Ragas Evaluation**: Automated QA generation and benchmarked pipeline outputs against GPT-4 evaluators.
+- [x] **FlashRank Integration**: Added alternative ONNX-powered reranking utilizing `ms-marco-MiniLM-L-12-v2` to support lightweight, framework-agnostic execution.
