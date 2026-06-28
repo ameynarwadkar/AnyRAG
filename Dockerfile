@@ -15,7 +15,7 @@ COPY . /app
 # Install Python packages using uv
 # Install CPU-only torch first to prevent downloading massive CUDA drivers that crash the build
 RUN uv pip install --system torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
-RUN uv pip install --system fastapi uvicorn pydantic qdrant-client sentence-transformers rank-bm25 openai python-dotenv ragas langchain langchain-openai langchain-community langchain-text-splitters datasets pandas python-multipart beautifulsoup4 pypdf scikit-learn
+RUN uv pip install --system fastapi uvicorn pydantic qdrant-client sentence-transformers rank-bm25 openai python-dotenv ragas langchain langchain-openai langchain-community langchain-text-splitters datasets pandas python-multipart beautifulsoup4 pypdf scikit-learn langfuse flashrank fastmcp
 
 EXPOSE 8000
 
