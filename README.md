@@ -1,3 +1,12 @@
+---
+title: AnyRAG
+emoji: 🚀
+colorFrom: blue
+colorTo: yellow
+sdk: docker
+app_port: 8000
+pinned: false
+---
 # AnyRAG: Production-Ready Hybrid RAG System
 
 AnyRAG is a production-grade, end-to-end Retrieval-Augmented Generation (RAG) system designed to let you upload, index, and query any document corpus. It implements a full two-stage retrieval funnel (recall-optimized hybrid search → precision-optimized cross-encoder reranking), multi-turn conversation history, semantic response caching, Langfuse observability tracing, and citation-verified LLM generation with output guardrails.
