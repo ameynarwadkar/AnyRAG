@@ -12,6 +12,127 @@ document.addEventListener('DOMContentLoaded', () => {
     const uploadStatus = document.getElementById("upload-status");
     const uploadSubmit = document.getElementById("upload-submit");
 
+    // === Demo Mode Detection ===
+    // Demo mode activates when the backend is unreachable (static hosting).
+    // In demo mode, all queries are served from DEMO_CACHE (demo_cache.js).
+    let isDemoMode = false;
+
+    const activateDemoMode = () => {
+        isDemoMode = true;
+
+        // Show demo banner
+        const demoBanner = document.getElementById('demo-banner');
+        if (demoBanner) demoBanner.classList.remove('hidden');
+
+        // Update status indicator
+        const statusIndicator = document.getElementById('status-indicator');
+        if (statusIndicator) {
+            statusIndicator.textContent = '[DEMO]';
+            statusIndicator.style.color = 'var(--text-dim)';
+        }
+
+        // Disable upload and rebuild controls
+        const uploadCard = document.getElementById('upload-card');
+        if (uploadCard) uploadCard.classList.add('demo-disabled');
+        if (rebuildBtn) {
+            rebuildBtn.disabled = true;
+            rebuildBtn.classList.add('demo-disabled');
+        }
+
+        // Populate sample query cards in the hero section
+        const sampleQueriesContainer = document.getElementById('sample-queries');
+        if (sampleQueriesContainer && typeof DEMO_SAMPLE_QUESTIONS !== 'undefined') {
+            const label = document.createElement('div');
+            label.className = 'sample-queries-label';
+            label.textContent = 'SAMPLE QUERIES';
+            sampleQueriesContainer.appendChild(label);
+
+            DEMO_SAMPLE_QUESTIONS.forEach(q => {
+                const card = document.createElement('div');
+                card.className = 'sample-query-card';
+                
+                const textSpan = document.createElement('span');
+                textSpan.textContent = q;
+                card.appendChild(textSpan);
+                
+                card.addEventListener('click', () => {
+                    userInput.value = q;
+                    const sendBtn = document.getElementById('send-button');
+                    if (sendBtn) {
+                        sendBtn.click();
+                    } else {
+                        chatForm.requestSubmit(); // modern standard fallback
+                    }
+                });
+                sampleQueriesContainer.appendChild(card);
+            });
+            sampleQueriesContainer.classList.remove('hidden');
+        }
+
+        // Update hero subtitle
+        const heroSubtitle = document.getElementById('hero-subtitle');
+        if (heroSubtitle) {
+            heroSubtitle.textContent = 'DEMO MODE. SELECT A PRE-CACHED QUERY BELOW TO SEE THE FULL RAG PIPELINE OUTPUT.';
+        }
+
+        // Update input placeholder
+        if (userInput) {
+            userInput.placeholder = '> Select a sample query above, or type one to see it matched...';
+        }
+
+        // Populate corpus stats from demo data
+        if (statsBody && typeof DEMO_CORPUS_STATS !== 'undefined') {
+            statsBody.innerHTML = '';
+            DEMO_CORPUS_STATS.forEach(stat => {
+                const tr = document.createElement('tr');
+                const tdId = document.createElement('td');
+                tdId.textContent = stat.source_file;
+                const tdCount = document.createElement('td');
+                tdCount.textContent = stat.count;
+                tr.appendChild(tdId);
+                tr.appendChild(tdCount);
+                statsBody.appendChild(tr);
+            });
+        }
+    };
+
+    /**
+     * Find the best matching cached response for a given query.
+     * Uses exact match first, then falls back to substring/keyword matching.
+     */
+    const findCachedResponse = (query) => {
+        if (typeof DEMO_CACHE === 'undefined') return null;
+
+        // Exact match
+        if (DEMO_CACHE[query]) return DEMO_CACHE[query];
+
+        // Normalize and try case-insensitive match
+        const lowerQuery = query.toLowerCase().trim();
+        for (const [key, value] of Object.entries(DEMO_CACHE)) {
+            if (key.toLowerCase() === lowerQuery) return value;
+        }
+
+        // Keyword overlap matching: find the cached entry with the most shared words
+        const queryWords = new Set(lowerQuery.split(/\s+/).filter(w => w.length > 3));
+        let bestMatch = null;
+        let bestScore = 0;
+
+        for (const [key, value] of Object.entries(DEMO_CACHE)) {
+            const keyWords = new Set(key.toLowerCase().split(/\s+/).filter(w => w.length > 3));
+            let overlap = 0;
+            for (const word of queryWords) {
+                if (keyWords.has(word)) overlap++;
+            }
+            const score = overlap / Math.max(queryWords.size, 1);
+            if (score > bestScore && score >= 0.3) {
+                bestScore = score;
+                bestMatch = value;
+            }
+        }
+
+        return bestMatch;
+    };
+
     // === Theme Management ===
     const themeToggleBtn = document.getElementById("theme-toggle");
     const currentTheme = localStorage.getItem("anyrag_theme") || "light";
@@ -48,7 +169,17 @@ document.addEventListener('DOMContentLoaded', () => {
             localStorage.setItem("anyrag_session_id", sessionId);
             sessionDisplay.textContent = sessionId;
             chatHistory.innerHTML = '';
-            addMessage("Started a new fresh session! Upload some data on the Manage panel to begin.", "ai");
+            
+            // Show the hero section again
+            const hero = document.getElementById('hero-section');
+            if (hero) {
+                hero.classList.remove('hidden');
+                hero.style.opacity = '1';
+            }
+            
+            if (!isDemoMode) {
+                addMessage("Started a new fresh session! Upload some data on the Manage panel to begin.", "ai");
+            }
             loadStats();
         });
     }
@@ -158,7 +289,7 @@ document.addEventListener('DOMContentLoaded', () => {
         userInput.addEventListener('keydown', function(e) {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
-                chatForm.dispatchEvent(new Event('submit'));
+                chatForm.requestSubmit();
             }
         });
 
@@ -172,6 +303,73 @@ document.addEventListener('DOMContentLoaded', () => {
             userInput.disabled = true;
             addTypingIndicator();
 
+            // === Demo Mode: serve from cache ===
+            if (isDemoMode) {
+                // Simulate network delay for realism
+                await new Promise(resolve => setTimeout(resolve, 600 + Math.random() * 800));
+                removeTypingIndicator();
+
+                const cached = findCachedResponse(text);
+                let msgDiv;
+                if (cached) {
+                    msgDiv = addMessage(formatAIResponse(cached), 'ai', true);
+                } else {
+                    msgDiv = addMessage(
+                        `<p>This query is not in the demo cache. In a live deployment, this would trigger the full RAG pipeline.</p>
+                        <p style="color: var(--text-dim); margin-top: 8px;">Try one of the sample queries, or <a href="https://github.com/ameynarwadkar/finRAG" style="color: var(--accent-raw);">clone the repo</a> and run it locally with your own API keys.</p>`,
+                        'ai', true
+                    );
+                }
+
+                // Append other clickable queries to the message
+                if (typeof DEMO_SAMPLE_QUESTIONS !== 'undefined') {
+                    const remainingQueries = DEMO_SAMPLE_QUESTIONS.filter(q => q !== text && (!cached || q !== cached.question));
+                    if (remainingQueries.length > 0) {
+                        const suggestionsContainer = document.createElement('div');
+                        suggestionsContainer.className = 'sample-queries';
+                        suggestionsContainer.style.marginTop = '20px';
+                        suggestionsContainer.style.borderTop = '1px dashed var(--border-hard)';
+                        suggestionsContainer.style.paddingTop = '15px';
+                        
+                        const label = document.createElement('div');
+                        label.className = 'sample-queries-label';
+                        label.textContent = 'OTHER SAMPLE QUERIES';
+                        suggestionsContainer.appendChild(label);
+
+                        remainingQueries.forEach(q => {
+                            const card = document.createElement('div');
+                            card.className = 'sample-query-card';
+                            
+                            const textSpan = document.createElement('span');
+                            textSpan.textContent = q;
+                            card.appendChild(textSpan);
+                            
+                            card.addEventListener('click', () => {
+                                userInput.value = q;
+                                const sendBtn = document.getElementById('send-button');
+                                if (sendBtn) {
+                                    sendBtn.click();
+                                } else {
+                                    chatForm.requestSubmit();
+                                }
+                            });
+                            suggestionsContainer.appendChild(card);
+                        });
+                        
+                        const contentDiv = msgDiv.querySelector('.message-content');
+                        if (contentDiv) {
+                            contentDiv.appendChild(suggestionsContainer);
+                            chatHistory.scrollTop = chatHistory.scrollHeight;
+                        }
+                    }
+                }
+
+                userInput.disabled = false;
+                userInput.focus();
+                return;
+            }
+
+            // === Live Mode: hit the backend ===
             try {
                 const methodSelect = document.getElementById('retrieval-method');
                 const retrievalMethod = methodSelect ? methodSelect.value : "hybrid_rrf";
@@ -205,6 +403,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // === Manage Functions ===
     const loadStats = async () => {
         if (!statsBody) return;
+        if (isDemoMode) return; // Stats already populated by activateDemoMode
         try {
             const response = await fetch('/v1/documents?session_id=' + encodeURIComponent(sessionId));
             const data = await response.json();
@@ -230,8 +429,6 @@ document.addEventListener('DOMContentLoaded', () => {
             statsBody.innerHTML = '<tr><td colspan="2" style="text-align:center;color:#ff7b72;">Failed to load statistics.</td></tr>';
         }
     };
-
-    loadStats();
 
     if (rebuildBtn) {
         rebuildBtn.addEventListener('click', async () => {
@@ -311,4 +508,19 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+    // === Startup: detect backend or activate demo mode ===
+    const init = async () => {
+        try {
+            const healthCheck = await fetch('/health', { method: 'GET', signal: AbortSignal.timeout(3000) });
+            if (!healthCheck.ok) throw new Error('Backend unhealthy');
+            // Backend is up, run in live mode
+            loadStats();
+        } catch {
+            // Backend unreachable, activate demo mode
+            activateDemoMode();
+        }
+    };
+
+    init();
 });

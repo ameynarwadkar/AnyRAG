@@ -29,10 +29,16 @@
                 <div class="status-dot"></div>
             </div>
         </div>
+
+        <!-- Demo mode banner in sidebar -->
+        <div id="demo-banner" class="demo-banner hidden">
+            <div class="demo-banner-label">DEMO MODE</div>
+            <div class="demo-banner-text">Pre-cached responses. No live backend or API calls.</div>
+        </div>
         
         <div class="version-footer">
             <span>ENGINE v1.0.0</span>
-            <span style="color: var(--accent-raw)">[ONLINE]</span>
+            <span id="status-indicator" style="color: var(--accent-raw)">[ONLINE]</span>
         </div>
         <button id="theme-toggle" style="display: none;"></button> <!-- Hidden as we enforce single utilitarian theme -->
     </div>
@@ -52,7 +58,10 @@
             <div id="hero-section" class="hero-section">
                 <div class="hero-tag">AUTONOMOUS SYNTHESIS PROTOCOL</div>
                 <div class="hero-title">KNOWLEDGE<br>RETRIEVAL</div>
-                <div class="hero-subtitle">SYSTEM IDLE. AWAITING QUERY INPUT FOR VECTOR SEARCH AND REASONING.</div>
+                <div class="hero-subtitle" id="hero-subtitle">SYSTEM IDLE. AWAITING QUERY INPUT FOR VECTOR SEARCH AND REASONING.</div>
+                <div id="sample-queries" class="sample-queries hidden">
+                    <!-- Populated by JS in demo mode -->
+                </div>
             </div>
             
             <div id="chat-history" class="chat-history">
@@ -71,7 +80,7 @@
         </div>
 
         <!-- MANAGE PANE -->
-        <div class="manage-wrapper">
+        <div class="manage-wrapper" id="manage-wrapper">
             <div class="card">
                 <h2 class="section-title">CORPUS STATUS</h2>
                 <table class="stats-table">
@@ -91,7 +100,7 @@
                 </div>
             </div>
 
-            <div class="card">
+            <div class="card" id="upload-card">
                 <h2 class="section-title">INGEST: FILE UPLOAD</h2>
                 <form id="upload-form">
                     <div class="form-group">
@@ -102,9 +111,16 @@
                 <div id="upload-status" class="status-msg hidden"></div>
             </div>
 
+            <a href="https://ameynarwadkar.github.io" target="_blank" class="portfolio-box">
+                <div class="portfolio-title">PRODUCTION DEPLOYMENT</div>
+                <div class="portfolio-text">This is a constrained demo. For enterprise implementation, full feature access, or custom RAG development, please contact the developer.</div>
+                <div class="portfolio-link">ameynarwadkar.github.io ↗</div>
+            </a>
         </div>
     </div>
+
     
+    <script src="demo_cache.js"></script>
     <script src="app.js"></script>
 </body>
 </html>

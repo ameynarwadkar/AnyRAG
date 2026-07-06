@@ -249,9 +249,9 @@ h1, h2, h3, .logo-text, .hero-title {
     text-align: left;
     width: 80%;
     max-width: 600px;
-    pointer-events: none;
+    pointer-events: auto;
     transition: opacity 0.3s;
-    z-index: 1;
+    z-index: 20;
     border-left: 4px solid var(--accent-raw);
     padding-left: 20px;
 }
@@ -475,3 +475,183 @@ h1, h2, h3, .logo-text, .hero-title {
 .dot:nth-child(2) { display: none; }
 .dot:nth-child(3) { display: none; }
 @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+
+/* --- DEMO MODE --- */
+.demo-banner {
+    margin-top: 15px;
+    padding: 10px;
+    border: 1px solid var(--accent-raw);
+    background: var(--accent-dim);
+}
+
+.demo-banner-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--accent-raw);
+    letter-spacing: 2px;
+    margin-bottom: 4px;
+}
+
+.demo-banner-text {
+    font-size: 11px;
+    color: var(--text-dim);
+    line-height: 1.4;
+}
+
+.sample-queries {
+    margin-top: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    pointer-events: auto;
+}
+
+.sample-query-card {
+    background: transparent;
+    border: 1px solid var(--border-hard);
+    padding: 12px 16px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-dim);
+    cursor: pointer;
+    transition: all 100ms linear;
+    text-align: left;
+    line-height: 1.4;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.sample-query-card::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0;
+    width: 3px;
+    height: 100%;
+    background: var(--accent-raw);
+    opacity: 0;
+    transition: opacity 100ms linear;
+}
+
+.sample-query-card:hover {
+    border-color: var(--accent-raw);
+    color: var(--text-main);
+    background: var(--bg-panel);
+}
+
+.sample-query-card:hover::before {
+    opacity: 1;
+}
+
+.sample-query-card:active {
+    background: var(--accent-raw);
+    color: #000;
+}
+
+.sample-query-card::after {
+    content: "[ RUN ]";
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--accent-raw);
+    letter-spacing: 1px;
+    opacity: 0.5;
+    transition: opacity 100ms linear;
+}
+
+.sample-query-card:hover::after {
+    opacity: 1;
+}
+
+.sample-query-card:active::after {
+    color: #000;
+}
+
+.sample-queries-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--accent-raw);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 2px;
+}
+
+.demo-disabled {
+    opacity: 0.35;
+    pointer-events: none;
+}
+
+.demo-disabled::after {
+    content: "DISABLED IN DEMO";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+    z-index: 10;
+}
+
+/* --- PORTFOLIO CONTACT BOX --- */
+.portfolio-box {
+    margin-top: auto;
+    display: block;
+    background: var(--bg-base);
+    border: 1px solid var(--border-hard);
+    padding: 20px;
+    text-decoration: none;
+    transition: all 150ms linear;
+    position: relative;
+    overflow: hidden;
+}
+
+.portfolio-box::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0;
+    width: 3px;
+    height: 100%;
+    background: var(--accent-raw);
+    opacity: 0;
+    transition: opacity 150ms linear;
+}
+
+.portfolio-box:hover {
+    border-color: var(--accent-raw);
+    background: var(--accent-dim);
+}
+
+.portfolio-box:hover::before {
+    opacity: 1;
+}
+
+.portfolio-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--accent-raw);
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+}
+
+.portfolio-text {
+    font-size: 11px;
+    color: var(--text-dim);
+    line-height: 1.5;
+    margin-bottom: 12px;
+}
+
+.portfolio-link {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-main);
+    display: flex;
+    justify-content: flex-end;
+    transition: color 150ms linear;
+}
+
+.portfolio-box:hover .portfolio-link {
+    color: var(--accent-raw);
+}
