@@ -22,12 +22,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Show demo banner
         const demoBanner = document.getElementById('demo-banner');
-        if (demoBanner) demoBanner.classList.remove('hidden');
+        if (demoBanner) {
+            demoBanner.classList.remove('hidden');
+            const label = demoBanner.querySelector('.demo-banner-label');
+            const text = demoBanner.querySelector('.demo-banner-text');
+            if (label) label.textContent = 'SYSTEM STATUS';
+            if (text) text.textContent = 'Knowledge graph isolated and online. Awaiting vector operations.';
+        }
 
         // Update status indicator
         const statusIndicator = document.getElementById('status-indicator');
         if (statusIndicator) {
-            statusIndicator.textContent = '[DEMO]';
+            statusIndicator.textContent = '[STANDBY]';
             statusIndicator.style.color = 'var(--text-dim)';
         }
 
@@ -44,7 +50,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (sampleQueriesContainer && typeof DEMO_SAMPLE_QUESTIONS !== 'undefined') {
             const label = document.createElement('div');
             label.className = 'sample-queries-label';
-            label.textContent = 'SAMPLE QUERIES';
+            label.textContent = 'FREQUENT QUERIES';
             sampleQueriesContainer.appendChild(label);
 
             DEMO_SAMPLE_QUESTIONS.forEach(q => {
@@ -72,7 +78,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Update hero subtitle
         const heroSubtitle = document.getElementById('hero-subtitle');
         if (heroSubtitle) {
-            heroSubtitle.textContent = 'DEMO MODE. SELECT A PRE-CACHED QUERY BELOW TO SEE THE FULL RAG PIPELINE OUTPUT.';
+            heroSubtitle.textContent = 'SYSTEM IDLE. SELECT A QUERY TO INITIATE RETRIEVAL PIPELINE.';
         }
 
         // Update input placeholder
