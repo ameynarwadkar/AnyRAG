@@ -29,7 +29,7 @@ def load_indices(session_id="default"):
     if qdrant:
         try:
             qdrant.close()
-        except:
+        except Exception:
             pass
             
     current_session_id = session_id
@@ -72,7 +72,8 @@ def load_indices(session_id="default"):
 
 @observe(as_type="retrieval")
 def search_bm25(query: str, k=10, source_filter: str = None):
-    if not bm25: return []
+    if not bm25:
+        return []
     tokenized_query = query.lower().split()
     scores = bm25.get_scores(tokenized_query)
     top_indices = scores.argsort()[::-1]
@@ -90,7 +91,8 @@ def search_bm25(query: str, k=10, source_filter: str = None):
 
 @observe(as_type="retrieval")
 def search_dense(query: str, k=10, source_filter: str = None):
-    if not qdrant or not dense_model: return []
+    if not qdrant or not dense_model:
+        return []
     vector = dense_model.encode(query).tolist()
     
     from qdrant_client.http import models

@@ -11,7 +11,7 @@ Run with:
 import json
 from fastmcp import FastMCP
 from app.refiner import refine_query
-from app.retrieval import hybrid_reranked_search, search_bm25, search_dense
+from app.retrieval import hybrid_reranked_search
 from app.generator import generate_answer
 
 mcp = FastMCP("EU FinReg RAG")

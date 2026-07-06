@@ -7,18 +7,18 @@ dummy_module = ModuleType("langchain_community.chat_models.vertexai")
 dummy_module.ChatVertexAI = None
 sys.modules["langchain_community.chat_models.vertexai"] = dummy_module
 
-from datasets import Dataset
-from ragas import evaluate
-from ragas.metrics import faithfulness, answer_relevancy, context_precision, context_recall
-from langchain_openai import AzureChatOpenAI
-from langchain_community.embeddings import HuggingFaceBgeEmbeddings
-from dotenv import load_dotenv
+from datasets import Dataset  # noqa: E402
+from ragas import evaluate  # noqa: E402
+from ragas.metrics import faithfulness, answer_relevancy, context_precision, context_recall  # noqa: E402
+from langchain_openai import AzureChatOpenAI  # noqa: E402
+from langchain_community.embeddings import HuggingFaceBgeEmbeddings  # noqa: E402
+from dotenv import load_dotenv  # noqa: E402
 
 # Add project root to sys path so we can import our app modules
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-import app.retrieval as retrieval_module
-from app.refiner import refine_query
-from app.generator import generate_answer
+import app.retrieval as retrieval_module  # noqa: E402
+from app.refiner import refine_query  # noqa: E402
+from app.generator import generate_answer  # noqa: E402
 
 load_dotenv()
 

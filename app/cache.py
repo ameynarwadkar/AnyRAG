@@ -3,10 +3,13 @@ import numpy as np
 from datetime import datetime, timedelta
 
 def cosine_similarity(v1, v2):
-    if not isinstance(v1, np.ndarray): v1 = np.array(v1)
-    if not isinstance(v2, np.ndarray): v2 = np.array(v2)
+    if not isinstance(v1, np.ndarray):
+        v1 = np.array(v1)
+    if not isinstance(v2, np.ndarray):
+        v2 = np.array(v2)
     norm = np.linalg.norm(v1) * np.linalg.norm(v2)
-    if norm == 0: return 0.0
+    if norm == 0:
+        return 0.0
     return np.dot(v1, v2) / norm
 
 class SemanticResponseCache:

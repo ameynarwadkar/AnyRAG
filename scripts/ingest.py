@@ -3,10 +3,8 @@ import json
 from pathlib import Path
 from bs4 import BeautifulSoup
 import pypdf
-import re
-import numpy as np
 from sentence_transformers import SentenceTransformer
-from langchain_text_splitters import RecursiveCharacterTextSplitter, CharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from sklearn.metrics.pairwise import cosine_similarity
 
 RAW_DIR = Path("data/raw")
@@ -18,7 +16,8 @@ def ensure_dirs():
 
 def semantic_chunking(text, threshold=0.75):
     paragraphs = [p.strip() for p in text.split('\n\n') if len(p.strip()) > 30]
-    if not paragraphs: return [text]
+    if not paragraphs:
+        return [text]
     model = SentenceTransformer("BAAI/bge-base-en-v1.5")
     embeddings = model.encode(paragraphs)
     
@@ -45,7 +44,8 @@ def apply_chunking(text, strategy):
 def format_chunks(raw_chunks, file_path, strategy):
     chunks = []
     for i, c in enumerate(raw_chunks):
-        if not c.strip(): continue
+        if not c.strip():
+            continue
         chunks.append({
             "source_file": file_path.stem,
             "chunk_id": f"{strategy}_{i+1}",
@@ -63,7 +63,8 @@ def parse_pdf(file_path, strategy):
             reader = pypdf.PdfReader(f)
             for page in reader.pages:
                 extracted = page.extract_text()
-                if extracted: full_text += extracted + "\n\n"
+                if extracted:
+                    full_text += extracted + "\n\n"
     except Exception as e:
         print(f"Error reading PDF {file_path}: {e}")
     return format_chunks(apply_chunking(full_text, strategy), file_path, strategy)

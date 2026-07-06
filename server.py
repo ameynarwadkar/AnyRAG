@@ -9,7 +9,7 @@ from pathlib import Path
 from langfuse import observe
 
 from scripts.build_index import build_indices
-from scripts.ingest import process_all, process_file
+from scripts.ingest import process_file
 import app.retrieval as retrieval_module
 from app.refiner import refine_query
 from app.retrieval import hybrid_reranked_search
