@@ -583,7 +583,7 @@ h1, h2, h3, .logo-text, .hero-title {
 }
 
 .demo-disabled::after {
-    content: "AUTHORIZATION REQUIRED";
+    content: "DISABLED IN DEMO";
     position: absolute;
     top: 50%;
     left: 50%;
