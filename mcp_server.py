@@ -1,8 +1,8 @@
 """
-MCP Server for EU Financial Regulation RAG System.
+MCP Server for RAG System.
 
-Exposes the finRAG pipeline as tools that any MCP-compatible AI agent
-(Claude Desktop, Cursor, etc.) can call to query EU regulations.
+Exposes the AnyRAG pipeline as tools that any MCP-compatible AI agent
+(Claude Desktop, Cursor, etc.) can call to query RAG.
 
 Run with:
     uv run python mcp_server.py

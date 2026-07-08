@@ -3,7 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const chatForm = document.getElementById('chat-form');
     const userInput = document.getElementById('user-input');
     const chatHistory = document.getElementById('chat-history');
-    
+
     const statsBody = document.getElementById('stats-body');
     const rebuildBtn = document.getElementById('rebuild-btn');
     const rebuildStatus = document.getElementById('rebuild-status');
@@ -50,11 +50,11 @@ document.addEventListener('DOMContentLoaded', () => {
             DEMO_SAMPLE_QUESTIONS.forEach(q => {
                 const card = document.createElement('div');
                 card.className = 'sample-query-card';
-                
+
                 const textSpan = document.createElement('span');
                 textSpan.textContent = q;
                 card.appendChild(textSpan);
-                
+
                 card.addEventListener('click', () => {
                     userInput.value = q;
                     const sendBtn = document.getElementById('send-button');
@@ -136,7 +136,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // === Theme Management ===
     const themeToggleBtn = document.getElementById("theme-toggle");
     const currentTheme = localStorage.getItem("anyrag_theme") || "light";
-    
+
     if (currentTheme === "dark") {
         document.body.classList.add("dark-mode");
     }
@@ -158,7 +158,7 @@ document.addEventListener('DOMContentLoaded', () => {
         sessionId = "session_" + Math.random().toString(36).substring(2, 9);
         localStorage.setItem("anyrag_session_id", sessionId);
     }
-    
+
     const sessionDisplay = document.getElementById("current-session-id");
     if (sessionDisplay) sessionDisplay.textContent = sessionId;
 
@@ -169,14 +169,14 @@ document.addEventListener('DOMContentLoaded', () => {
             localStorage.setItem("anyrag_session_id", sessionId);
             sessionDisplay.textContent = sessionId;
             chatHistory.innerHTML = '';
-            
+
             // Show the hero section again
             const hero = document.getElementById('hero-section');
             if (hero) {
                 hero.classList.remove('hidden');
                 hero.style.opacity = '1';
             }
-            
+
             if (!isDemoMode) {
                 addMessage("Started a new fresh session! Upload some data on the Manage panel to begin.", "ai");
             }
@@ -188,7 +188,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const scrollToBottom = () => {
         chatHistory.scrollTop = chatHistory.scrollHeight;
     };
-    
+
     // Hide hero section on first message
     const hideHero = () => {
         const hero = document.getElementById('hero-section');
@@ -220,6 +220,96 @@ document.addEventListener('DOMContentLoaded', () => {
         chatHistory.appendChild(messageDiv);
         scrollToBottom();
         return messageDiv;
+    };
+
+    const addStreamingMessage = (data, sender = 'ai') => {
+        return new Promise(async (resolve) => {
+            hideHero();
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message', sender);
+
+            const avatarDiv = document.createElement('div');
+            avatarDiv.classList.add('avatar');
+            avatarDiv.innerHTML = sender === 'user' ? '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>' : 'A';
+
+            const contentDiv = document.createElement('div');
+            contentDiv.classList.add('message-content');
+
+            messageDiv.appendChild(avatarDiv);
+            messageDiv.appendChild(contentDiv);
+            chatHistory.appendChild(messageDiv);
+
+            // Anchor view to where the AI output starts
+            chatHistory.scrollTop = messageDiv.offsetTop - 20;
+
+            let answerText = "";
+            if (typeof data.generation === "string") {
+                answerText = data.generation;
+            } else if (data.generation && data.generation.answer) {
+                answerText = data.generation.answer;
+            } else {
+                answerText = "Could not generate an answer.";
+            }
+
+            // Split on spaces to type word by word naturally and quickly
+            const tokens = answerText.split(/(\s+)/);
+            let currentText = "";
+
+            for (let i = 0; i < tokens.length; i++) {
+                currentText += tokens[i];
+                let formattedText = currentText.replace(/\[\s*(\d+)\s*\]/g, (match, num) => {
+                    return `<span class="source-link">[${num}]</span>`;
+                });
+                contentDiv.innerHTML = `<p>${formattedText.replace(/\n\n/g, '</p><p>').replace(/\n/g, '<br>')}</p>`;
+
+                // Fast 10ms typing delay
+                await new Promise(r => setTimeout(r, 10));
+            }
+
+            // Append sources dynamically
+            if (data.sources && data.sources.length > 0) {
+                const sourcesBox = document.createElement('div');
+                sourcesBox.className = 'sources-box fade-in-up';
+                let sourcesHtml = `<div class="sources-title">Sources Retrieved:</div>`;
+                data.sources.forEach((src, idx) => {
+                    sourcesHtml += `<div class="source-item">
+                        <span class="source-link">
+                            [${idx + 1}] ${(src.source_file || "").toUpperCase()} ${src.chunk_id} - ${src.section_heading}
+                        </span>
+                    </div>`;
+                });
+                sourcesBox.innerHTML = sourcesHtml;
+                contentDiv.appendChild(sourcesBox);
+            }
+
+            // Append confidence card
+            if (data.generation && data.generation.confidence_metrics) {
+                const metrics = data.generation.confidence_metrics;
+                const composite = (metrics.composite_score * 100) || (
+                    ((metrics.retrieval_confidence + metrics.citation_coverage + metrics.completeness) / 3) * 100
+                );
+
+                const confidenceBox = document.createElement('div');
+                confidenceBox.className = 'confidence-box fade-in-up';
+                confidenceBox.innerHTML = `
+                    <div class="confidence-header">
+                        <span class="confidence-title">Synthesis Confidence</span>
+                        <span class="confidence-score">${composite.toFixed(0)}%</span>
+                    </div>
+                    <div class="confidence-bar-container">
+                        <div class="confidence-bar" style="width: ${composite.toFixed(0)}%"></div>
+                    </div>
+                    <div class="confidence-details">
+                        <span>Retrieval Quality: ${(metrics.retrieval_confidence * 100).toFixed(0)}%</span>
+                        <span>Citation Accuracy: ${(metrics.citation_coverage * 100).toFixed(0)}%</span>
+                        <span>Synthesis Coverage: ${(metrics.completeness * 100).toFixed(0)}%</span>
+                    </div>
+                `;
+                contentDiv.appendChild(confidenceBox);
+            }
+
+            resolve(messageDiv);
+        });
     };
 
     const addTypingIndicator = () => {
@@ -259,12 +349,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (data.sources && data.sources.length > 0) {
             html += `<div class="sources-box">
-                <div class="sources-title">Sources Retrieved:</div>`;
+                <div class="sources-title">References & Context</div>`;
 
             data.sources.forEach((src, idx) => {
                 html += `<div class="source-item">
                     <span class="source-link">
-                        [${idx+1}] ${(src.source_file||"").toUpperCase()} ${src.chunk_id} - ${src.section_heading}
+                        [${idx + 1}] ${(src.source_file || "").toUpperCase()} (Chunk ${src.chunk_id}) &mdash; ${src.section_heading}
                     </span>
                 </div>`;
             });
@@ -273,11 +363,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (data.generation && data.generation.confidence_metrics) {
             const metrics = data.generation.confidence_metrics;
-            html += `<div class="confidence-box" style="margin-top:10px; font-size: 0.85em; color: var(--text-secondary);">
-                <strong>Confidence Metrics:</strong>
-                Retrieval: ${(metrics.retrieval_confidence * 100).toFixed(1)}% |
-                Citation: ${(metrics.citation_coverage * 100).toFixed(1)}% |
-                Completeness: ${(metrics.completeness * 100).toFixed(1)}%
+            const composite = (metrics.composite_score * 100) || (
+                ((metrics.retrieval_confidence + metrics.citation_coverage + metrics.completeness) / 3) * 100
+            );
+
+            html += `<div class="confidence-box">
+                <div class="confidence-header">
+                    <span class="confidence-title">Synthesis Confidence</span>
+                    <span class="confidence-score">${composite.toFixed(0)}%</span>
+                </div>
+                <div class="confidence-bar-container">
+                    <div class="confidence-bar" style="width: ${composite.toFixed(0)}%"></div>
+                </div>
+                <div class="confidence-details">
+                    <span>Retrieval Quality: ${(metrics.retrieval_confidence * 100).toFixed(0)}%</span>
+                    <span>Citation Accuracy: ${(metrics.citation_coverage * 100).toFixed(0)}%</span>
+                    <span>Synthesis Coverage: ${(metrics.completeness * 100).toFixed(0)}%</span>
+                </div>
             </div>`;
         }
 
@@ -286,7 +388,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (chatForm) {
         // Handle Enter key for textarea
-        userInput.addEventListener('keydown', function(e) {
+        userInput.addEventListener('keydown', function (e) {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 chatForm.requestSubmit();
@@ -312,13 +414,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 const cached = findCachedResponse(text);
                 let msgDiv;
                 if (cached) {
-                    msgDiv = addMessage(formatAIResponse(cached), 'ai', true);
+                    msgDiv = await addStreamingMessage(cached);
                 } else {
-                    msgDiv = addMessage(
-                        `<p>This query is not in the demo cache. In a live deployment, this would trigger the full RAG pipeline.</p>
-                        <p style="color: var(--text-dim); margin-top: 8px;">Try one of the sample queries, or <a href="https://github.com/ameynarwadkar/finRAG" style="color: var(--accent-raw);">clone the repo</a> and run it locally with your own API keys.</p>`,
-                        'ai', true
-                    );
+                    const fallbackData = {
+                        generation: {
+                            answer: "This query is not in the demo cache. In a live deployment, this would trigger the full RAG pipeline.\n\nTry one of the sample queries, or clone the repo (github.com/ameynarwadkar/AnyRAG) and run it locally with your own API keys."
+                        }
+                    };
+                    msgDiv = await addStreamingMessage(fallbackData);
                 }
 
                 // Append other clickable queries to the message
@@ -326,11 +429,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     const remainingQueries = DEMO_SAMPLE_QUESTIONS.filter(q => q !== text && (!cached || q !== cached.question));
                     if (remainingQueries.length > 0) {
                         const suggestionsContainer = document.createElement('div');
-                        suggestionsContainer.className = 'sample-queries';
+                        suggestionsContainer.className = 'sample-queries fade-in-up';
                         suggestionsContainer.style.marginTop = '20px';
                         suggestionsContainer.style.borderTop = '1px dashed var(--border-hard)';
                         suggestionsContainer.style.paddingTop = '15px';
-                        
+
                         const label = document.createElement('div');
                         label.className = 'sample-queries-label';
                         label.textContent = 'OTHER SAMPLE QUERIES';
@@ -339,11 +442,11 @@ document.addEventListener('DOMContentLoaded', () => {
                         remainingQueries.forEach(q => {
                             const card = document.createElement('div');
                             card.className = 'sample-query-card';
-                            
+
                             const textSpan = document.createElement('span');
                             textSpan.textContent = q;
                             card.appendChild(textSpan);
-                            
+
                             card.addEventListener('click', () => {
                                 userInput.value = q;
                                 const sendBtn = document.getElementById('send-button');
@@ -355,11 +458,10 @@ document.addEventListener('DOMContentLoaded', () => {
                             });
                             suggestionsContainer.appendChild(card);
                         });
-                        
+
                         const contentDiv = msgDiv.querySelector('.message-content');
                         if (contentDiv) {
                             contentDiv.appendChild(suggestionsContainer);
-                            chatHistory.scrollTop = chatHistory.scrollHeight;
                         }
                     }
                 }
@@ -387,7 +489,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 const data = await response.json();
-                addMessage(formatAIResponse(data), 'ai', true);
+                await addStreamingMessage(data);
 
             } catch (error) {
                 removeTypingIndicator();
@@ -407,7 +509,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const response = await fetch('/v1/documents?session_id=' + encodeURIComponent(sessionId));
             const data = await response.json();
-            
+
             statsBody.innerHTML = '';
             if (data.length === 0) {
                 statsBody.innerHTML = '<tr><td colspan="2" style="text-align:center;">No documents found.</td></tr>';
@@ -438,13 +540,13 @@ document.addEventListener('DOMContentLoaded', () => {
             rebuildStatus.className = 'status-msg hidden';
 
             try {
-                const response = await fetch('/v1/build_index', { 
+                const response = await fetch('/v1/build_index', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ session_id: sessionId })
                 });
                 if (!response.ok) throw new Error('Failed to rebuild indices');
-                
+
                 rebuildStatus.textContent = 'Success! Indices are up to date.';
                 rebuildStatus.className = 'status-msg success';
             } catch (err) {
@@ -473,20 +575,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
             uploadSubmit.disabled = true;
             uploadSubmit.textContent = "Uploading...";
-            if(uploadStatus) {
+            if (uploadStatus) {
                 uploadStatus.classList.remove("hidden");
                 uploadStatus.className = "status-msg";
                 uploadStatus.textContent = "Uploading and incrementally indexing... Please wait.";
             }
-            
+
             try {
                 const res = await fetch("/v1/upload", {
                     method: "POST",
                     body: formData
                 });
-                
+
                 const data = await res.json();
-                if(uploadStatus) {
+                if (uploadStatus) {
                     if (data.status === "success") {
                         uploadStatus.className = "status-msg success";
                         uploadStatus.textContent = data.message;
@@ -498,7 +600,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                 }
             } catch (err) {
-                if(uploadStatus) {
+                if (uploadStatus) {
                     uploadStatus.className = "status-msg error";
                     uploadStatus.textContent = "Error: " + err.message;
                 }
